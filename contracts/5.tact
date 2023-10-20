@@ -129,36 +129,50 @@ contract Task5 with Deployable {
 
   receive(msg: AdminWithdrawalAllNFTs) {
     require(context().value >= ton("1") + self.length * ton("0.08"), "Insufficent funds");
-    require(sender() == self.owner, "Invalid sender");
+    require(sender() == self.owner || sender() == myAddress(), "Invalid sender");
 
-    nativeReserve(ton("0.1"), 0);
+    let last: Bool = false;
+    if (self.length <= 100) {
+      nativeReserve(ton("0.1"), 0);
+      last = true;
+    }
 
-    while(self.length > 0){
-      let nft: Address = self.nfts.get(self.length - 1)!!;
-      if (self.length == 1) {
-        // the last one
-        transferNft(nft, ton("0.06"), SendIgnoreErrors + SendRemainingBalance, msg.queryId, self.owner);
-      } else {
-        transferNft(nft, ton("0.06"), SendIgnoreErrors, msg.queryId, self.owner);
-      }
-      /**
-      send(
-          SendParameters{
-          to: nft!!,
-          value: ton("0.06"),
-          bounce: true,
-          mode: SendIgnoreErrors,
-          body: Transfer{
-              queryId: msg.queryId,
-              newOwner: self.owner,
-              responseDestination: myAddress(),
-              customPayload: null,
-              forwardAmount: 0,
-              forwardPayload: emptySlice()
-          }.toCell()
+    let count: Int = 0;
+    while(self.length > 0 && count < 100) {
+        let nft: Address = self.nfts.get(self.length - 1)!!;
+        let mode: Int = SendIgnoreErrors;
+        if (self.length == 1 && last) {
+           mode = SendRemainingBalance + SendIgnoreErrors;
+        }
+        send(SendParameters{
+            to: nft,
+            value: ton("0.06"),
+            bounce: true,
+            mode: mode,
+            body: Transfer{
+                queryId: msg.queryId,
+                newOwner: self.owner,
+                responseDestination: myAddress(),
+                customPayload: null,
+                forwardAmount: 0,
+                forwardPayload: emptySlice()
+            }.toCell()
         });
-        **/
-      self.length = self.length - 1;
+        self.length = self.length - 1;
+        count = count + 1;
+    }
+    if (!last) {
+        let valueToSend: Int = ton("1") + (self.length - 100) * ton("0.08");
+        nativeReserve(myBalance() - valueToSend, 0);
+        send(SendParameters{
+            to: myAddress(),
+            value: valueToSend,
+            bounce: true,
+            mode: SendRemainingBalance,
+            body: AdminWithdrawalAllNFTs {
+                queryId: msg.queryId
+            }.toCell()
+        });
     }
   }
 
