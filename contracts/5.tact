@@ -90,12 +90,14 @@ contract Task5 with Deployable {
   owner: Address;
   nfts: map<Int as uint16, Address>;
   length: Int as uint16;
+  saved_balance: Int as uint128;
   
   init(seed: Int, owner: Address) {
     self.owner = owner;
     self.seed = seed; // needed to deploy multiple smart contracts copies from one admin address
     self.length = 0;
     self.nfts = emptyMap();
+    self.saved_balance = 0;
   }
 
   receive(msg: OwnershipAssigned) {
@@ -140,12 +142,12 @@ contract Task5 with Deployable {
     let count: Int = 0;
     while(self.length > 0 && count < 100) {
         let nft: Address = self.nfts.get(self.length - 1)!!;
+        let mode: Int = SendPayGasSeparately;
         if (self.length == 1 && last) {
-           nativeReserve(ton("0.1"), 0);
-        } else {
-           nativeReserve(myBalance() - ton("0.06"), 0);
+           nativeReserve(self.saved_balance, 0);
+           mode = SendRemainingBalance;
         }
-        transferNft(nft, ton("0.06"), SendRemainingBalance + SendIgnoreErrors, msg.queryId, self.owner);
+        transferNft(nft, ton("0.06"), mode, msg.queryId, self.owner);
         self.nfts.set(self.length - 1, null);
         self.length = self.length - 1;
         count = count + 1;
@@ -166,6 +168,7 @@ contract Task5 with Deployable {
   receive(msg: AdminWithdrawalAllNFTs) {
     require(context().value >= ton("1") + self.length * ton("0.08"), "Insufficent funds");
     require(sender() == self.owner, "Invalid sender");
+    self.saved_balance = myBalance() - context().value;
 
     send(SendParameters {
         to: myAddress(),
