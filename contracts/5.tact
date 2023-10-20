@@ -162,7 +162,7 @@ contract Task5 with Deployable {
         count = count + 1;
     }
     if (!last) {
-        let valueToSend: Int = ton("1") + (self.length - 100) * ton("0.08");
+        let valueToSend: Int = ton("1") + self.length * ton("0.08");
         nativeReserve(myBalance() - valueToSend, 0);
         send(SendParameters{
             to: myAddress(),
