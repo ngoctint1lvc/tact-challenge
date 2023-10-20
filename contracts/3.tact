@@ -102,7 +102,7 @@ contract Task3 with Deployable {
         transfer(token, msg.from, msg.amount);
         return;
       }
-      let bOut: Int = self.bAmount * msg.amount / self.aAmount;
+      let bOut: Int = (self.bAmount * self.decimal / self.aAmount) * msg.amount / self.decimal;
       self.aAmount = self.aAmount + msg.amount;
       self.bAmount = self.bAmount - bOut;
       transfer(self.jettonAddressB, msg.from, bOut);
@@ -111,7 +111,7 @@ contract Task3 with Deployable {
         transfer(token, msg.from, msg.amount);
         return;
       }
-      let aOut: Int = self.aAmount * msg.amount / self.bAmount;
+      let aOut: Int = (self.aAmount * self.decimal / self.bAmount * msg.amount) / self.decimal;
       self.bAmount = self.bAmount + msg.amount;
       self.aAmount = self.aAmount - aOut;
       transfer(self.jettonAddressA, msg.from, aOut);
