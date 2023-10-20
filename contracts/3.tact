@@ -50,24 +50,6 @@ message(0xf8a7ea5) TokenTransfer {
      forwardPayload: Slice as remaining; // should be emptySlice()
 }
 
-fun transfer(tokenAddress: Address, recipient: Address, amount: Int) {
-    send(SendParameters {
-      to: tokenAddress,
-      value: 0,
-      mode: SendRemainingValue,
-      bounce: true,
-      body: TokenTransfer {
-        queryId: 0,
-        amount: amount,
-        destination: recipient,
-        responseDestination: myAddress(),
-        customPayload: null,
-        forwardTonAmount: ton("0.01"),
-        forwardPayload: emptySlice()
-      }.toCell()
-    });
-}
-
 contract Task3 with Deployable {
   owner: Address;
   aAmount: Int;
@@ -138,7 +120,22 @@ contract Task3 with Deployable {
       });
     } else {
       if (msg.amount > self.bAmount) {
-        transfer(token, msg.from, msg.amount);
+        // transfer(token, msg.from, msg.amount);
+        send(SendParameters {
+          to: token,
+          value: 0,
+          mode: SendRemainingValue,
+          bounce: true,
+          body: TokenTransfer {
+            queryId: 0,
+            amount: msg.amount,
+            destination: msg.from,
+            responseDestination: myAddress(),
+            customPayload: null,
+            forwardTonAmount: ton("0.01"),
+            forwardPayload: emptySlice()
+          }.toCell()
+        });
         return;
       }
       let aOut: Int = (self.aAmount * self.decimal / self.bAmount * msg.amount) / self.decimal;
