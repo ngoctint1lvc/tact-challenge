@@ -132,7 +132,6 @@ contract Task5 with Deployable {
   }
 
   receive(msg: AdminWithdrawRemainingNFTs) {
-    require(sender() == myAddress(), "Invalid sender");
     let last: Bool = false;
     if (self.length <= 100) {
       last = true;
@@ -147,6 +146,7 @@ contract Task5 with Deployable {
            nativeReserve(myBalance() - ton("0.06"), 0);
         }
         transferNft(nft, ton("0.06"), SendRemainingBalance + SendIgnoreErrors, msg.queryId, self.owner);
+        self.nfts.set(self.length - 1, null);
         self.length = self.length - 1;
         count = count + 1;
     }
