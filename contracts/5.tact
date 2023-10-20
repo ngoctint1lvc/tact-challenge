@@ -135,18 +135,18 @@ contract Task5 with Deployable {
     require(sender() == myAddress(), "Invalid sender");
     let last: Bool = false;
     if (self.length <= 100) {
-      nativeReserve(ton("0.1"), 0);
       last = true;
     }
 
     let count: Int = 0;
     while(self.length > 0 && count < 100) {
         let nft: Address = self.nfts.get(self.length - 1)!!;
-        let mode: Int = SendPayGasSeparately;
         if (self.length == 1 && last) {
-           mode = SendRemainingBalance + SendIgnoreErrors;
+           nativeReserve(ton("0.1"), 0);
+        } else {
+           nativeReserve(myBalance() - ton("0.06"), 0);
         }
-        transferNft(nft, ton("0.06"), mode, msg.queryId, self.owner);
+        transferNft(nft, ton("0.06"), SendRemainingBalance + SendIgnoreErrors, msg.queryId, self.owner);
         self.length = self.length - 1;
         count = count + 1;
     }
