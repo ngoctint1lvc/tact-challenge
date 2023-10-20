@@ -64,6 +64,10 @@ message(0x5fcc3d14) Transfer {
     forwardPayload: Slice as remaining; 
 }
 
+message AdminWithdrawRemainingNFTs {
+    queryId: Int as uint64;
+}
+
 fun transferNft(nft: Address, value: Int, mode: Int, queryId: Int, newOwner: Address) {
     send(SendParameters {
       to: nft,
@@ -127,10 +131,8 @@ contract Task5 with Deployable {
     });
   }
 
-  receive(msg: AdminWithdrawalAllNFTs) {
-    require(context().value >= ton("1") + self.length * ton("0.08"), "Insufficent funds");
-    require(sender() == self.owner || sender() == myAddress(), "Invalid sender");
-
+  receive(msg: AdminWithdrawRemainingNFTs) {
+    require(sender() == myAddress(), "Invalid sender");
     let last: Bool = false;
     if (self.length <= 100) {
       nativeReserve(ton("0.1"), 0);
@@ -140,40 +142,40 @@ contract Task5 with Deployable {
     let count: Int = 0;
     while(self.length > 0 && count < 100) {
         let nft: Address = self.nfts.get(self.length - 1)!!;
-        let mode: Int = SendIgnoreErrors;
+        let mode: Int = SendPayGasSeparately;
         if (self.length == 1 && last) {
            mode = SendRemainingBalance + SendIgnoreErrors;
         }
-        send(SendParameters{
-            to: nft,
-            value: ton("0.06"),
-            bounce: true,
-            mode: mode,
-            body: Transfer{
-                queryId: msg.queryId,
-                newOwner: self.owner,
-                responseDestination: myAddress(),
-                customPayload: null,
-                forwardAmount: 0,
-                forwardPayload: emptySlice()
-            }.toCell()
-        });
+        transferNft(nft, ton("0.06"), mode, msg.queryId, self.owner);
         self.length = self.length - 1;
         count = count + 1;
     }
     if (!last) {
-        let valueToSend: Int = ton("1") + self.length * ton("0.08");
-        nativeReserve(myBalance() - valueToSend, 0);
         send(SendParameters{
             to: myAddress(),
-            value: valueToSend,
+            value: 0,
             bounce: true,
             mode: SendRemainingBalance,
-            body: AdminWithdrawalAllNFTs {
+            body: AdminWithdrawRemainingNFTs {
                 queryId: msg.queryId
             }.toCell()
         });
     }
+  }
+
+  receive(msg: AdminWithdrawalAllNFTs) {
+    require(context().value >= ton("1") + self.length * ton("0.08"), "Insufficent funds");
+    require(sender() == self.owner, "Invalid sender");
+
+    send(SendParameters {
+        to: myAddress(),
+        value: 0,
+        bounce: true,
+        mode: SendRemainingBalance,
+        body: AdminWithdrawRemainingNFTs {
+            queryId: msg.queryId
+        }.toCell()
+    });
   }
 
   get fun profit(): Int {
