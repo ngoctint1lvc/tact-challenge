@@ -46,11 +46,11 @@ message NftWithdrawal {
   nftAddress: Address;
 }
 
-fun transferNft(to: Address, mode: Int, queryId: Int, newOwner: Address) {
+fun transferNft(to: Address, queryId: Int, newOwner: Address) {
     send(SendParameters {
       to: to,
       value: 0,
-      mode: mode,
+      mode: SendRemainingValue,
       bounce: true,
       body: Transfer {
           queryId: queryId,
@@ -76,7 +76,7 @@ contract Task4 with Deployable {
 
   receive(msg: OwnershipAssigned) {
     if(self.owner != null) {
-        transferNft(sender(), SendRemainingValue, msg.queryId, msg.prevOwner);
+        transferNft(sender(), msg.queryId, msg.prevOwner);
         return;
     }
     self.unlockTime = now() + msg.forwardPayload.loadUint(32);
@@ -91,10 +91,11 @@ contract Task4 with Deployable {
       return;
     }
 
+
+    transferNft(self.nft!!, msg.queryId, self.owner!!);
     self.unlockTime = 0;
     self.owner = null;
     self.nft = null;
-    transferNft(self.nft!!, SendRemainingValue + SendIgnoreErrors, msg.queryId, sender());
   }
 
   get fun time(): Int {
