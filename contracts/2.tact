@@ -44,7 +44,7 @@ contract Task2 with Deployable {
             value: context().value,
             bounce: false,
             to: self.admin,
-            mode: SendIgnoreErrors + SendRemainingBalances,
+            mode: SendIgnoreErrors + SendRemainingBalance,
             body: beginCell()
                 .storeRef(
                     beginCell().storeSlice(msg).asCell()
