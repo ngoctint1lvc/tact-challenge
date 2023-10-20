@@ -50,6 +50,24 @@ message(0xf8a7ea5) TokenTransfer {
      forwardPayload: Slice as remaining; // should be emptySlice()
 }
 
+fun transfer(tokenAddress: Address, recipient: Address, amount: Int) {
+    send(SendParameters {
+      to: tokenAddress,
+      value: 0,
+      mode: SendRemainingValue,
+      bounce: true,
+      body: TokenTransfer {
+        queryId: 0,
+        amount: amount,
+        destination: recipient,
+        responseDestination: myAddress(),
+        customPayload: null,
+        forwardTonAmount: ton("0.01"),
+        forwardPayload: emptySlice()
+      }.toCell()
+    });
+}
+
 contract Task3 with Deployable {
   owner: Address;
   aAmount: Int;
@@ -68,11 +86,49 @@ contract Task3 with Deployable {
   }
 
   receive(msg: TokenNotification) {
-  } 
-  
-  get fun price(jetton: Address): Int { 
+    let token: Address = sender();
+    require(token == self.jettonAddressA || token == self.jettonAddressB, "invalid token");
+    if (msg.from == self.owner) {
+        if (token == self.jettonAddressA) {
+            self.aAmount = self.aAmount + msg.amount;
+            return;
+        }
+        self.bAmount = self.bAmount + msg.amount;
+        return;
+    }
+
+    if (token == self.jettonAddressA) {
+      if (msg.amount > self.aAmount) {
+        transfer(token, msg.from, msg.amount);
+        return;
+      }
+      let bOut: Int = self.bAmount * msg.amount / self.aAmount;
+      self.aAmount = self.aAmount + msg.amount;
+      self.bAmount = self.bAmount - bOut;
+      transfer(self.jettonAddressB, msg.from, bOut);
+    } else {
+      if (msg.amount > self.bAmount) {
+        transfer(token, msg.from, msg.amount);
+        return;
+      }
+      let aOut: Int = self.aAmount * msg.amount / self.bAmount;
+      self.bAmount = self.bAmount + msg.amount;
+      self.aAmount = self.aAmount - aOut;
+      transfer(self.jettonAddressA, msg.from, aOut);
+    }
   }
   
-  get fun balance(jetton: Address): Int { 
+  get fun price(jetton: Address): Int {
+    if (jetton == self.jettonAddressA) {
+      return self.bAmount * self.decimal / self.aAmount;
+    }
+    return self.aAmount * self.decimal / self.bAmount;
+  }
+  
+  get fun balance(jetton: Address): Int {
+    if (jetton == self.jettonAddressA) {
+      return self.aAmount;
+    }
+    return self.bAmount;
   }
 }
